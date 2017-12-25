@@ -40,6 +40,14 @@ export function formatCard(card: Card): string {
   return rankToText(card.rank) + card.suit;
 }
 
+/** Parse a 2-character card like 'QD' or 'TH'. */
+export function parseCard(text: string): Card {
+  return {
+    rank: textToRank(text.charAt(0)),
+    suit: text.charAt(1) as Suit,
+  };
+}
+
 // play goes in clockwise order
 const NEXT_PLAYER: {[player: string]: Player} = {
   N: 'E',
@@ -149,6 +157,13 @@ export function randomDeal(): Deal {
   };
 }
 
+export function formatDeal(deal: Deal): string {
+  return _.map(deal as any, (hand: Hand, player: string) => {
+    const handStr = _.flatten(_.values(hand)).map(formatCard).join(', ');
+    return `${player}: ${handStr}`;
+  }).join('\n');
+}
+
 export interface Play {
   card: Card;
   player: Player;
@@ -208,10 +223,57 @@ function sweepTrick(board: Board): Board {
 
   const newBoard = { ...board };
   newBoard.completedTricks = board.completedTricks.concat([{...trick, winner}]);
-  newBoard.currentPlay = (newBoard.completedTricks.length < 13 ? {
+  newBoard.currentPlay = isComplete(newBoard) ? undefined : {
     player: winner,
     trick: {leader: winner, plays: []}
-  } : undefined);
+  };
   newBoard.cardsTaken[winner] = board.cardsTaken[winner].concat(trick.plays.map(play => play.card));
   return newBoard;
+}
+
+/** Play the given card, completing the trick if appropriate. */
+export function play(board: Board, card: Card): Board {
+  const {currentPlay} = board;
+  if (!currentPlay) {
+    throw new Error(`Cannot play on a board without an in-progress trick.`);
+  }
+
+  const {trick, player} = currentPlay;
+  const cardIndex = board.hands[player][card.suit].indexOf(card);
+  if (cardIndex === -1) {
+    throw new Error(`Tried to play ${formatCard(card)} which was not ${player}'s card to play.`);
+  }
+
+  const newTrick: Trick = {
+    plays: trick.plays.concat([{card, player}]),
+    leader: trick.leader
+  };
+
+  const newBoard = { ...board };
+  newBoard.currentPlay = {
+    trick: newTrick,
+    player: NEXT_PLAYER[player],
+  };
+  newBoard.hands = {
+    ...board.hands,
+    [player]: {
+      ...board.hands[player],
+      [card.suit]: _.without(board.hands[player][card.suit], card)
+    }
+  }
+  if (newTrick.plays.length === 4) {
+    return sweepTrick(newBoard);
+  }
+  return newBoard;
+}
+
+export function isComplete(board: Board) {
+  return board.completedTricks.length >= 13;
+}
+
+export function formatBoard(board: Board): string {
+  return JSON.stringify({
+    ...board,
+    hands: formatDeal(board.hands),
+  }, null, 2);
 }
