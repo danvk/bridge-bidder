@@ -8,5 +8,8 @@
     "@types/lodash": "^4.14.87",
     "lodash": "^4.17.4",
     "typescript": "^2.6.2"
+  },
+  "devDependencies": {
+    "ts-node": "^3.3.0"
   }
 }

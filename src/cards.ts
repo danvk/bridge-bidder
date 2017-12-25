@@ -13,13 +13,6 @@ export enum Suit {
 
 export type Player = 'N' | 'E' | 'S' | 'W';
 
-// export enum Player {
-//   NORTH = 'N',
-//   EAST = 'E',
-//   SOUTH = 'S',
-//   WEST = 'W',
-// }
-
 export interface Card {
   rank: number;  // 2-14 (11=J, 12=Q, 13=K, 14=A)
   suit: Suit;
@@ -119,7 +112,7 @@ function parsePBNStrings(pbn: string): PBNDeal {
   return hands as any;  // We asserted four parts, so the deal must be complete.
 }
 
-function parsePBN(pbn: string): Deal {
+export function parsePBN(pbn: string): Deal {
   var pbnDeal = parsePBNStrings(pbn);
 
   return _.mapValues(pbnDeal, (pbnHand, player) => {
@@ -131,4 +124,33 @@ function parsePBN(pbn: string): Deal {
       return { suit, rank: textToRank(card) } as Card;
     }));
   });
+}
+
+/** Group cards into suits, sorted in ascending order. */
+export function assembleHand(cards: Card[]): Hand {
+  const hand: Hand = {C: [], D: [], H: [], S: []};
+  for (const card of cards) {
+    hand[card.suit].push(card);
+  }
+  _.forEach(hand, holding => {
+    holding.sort(compareCards);
+  });
+  return hand;
+}
+
+/** Returns a new 52-element array of cards, in compareCards order. */
+export function fullDeck(): Card[] {
+  return _.flatMap(_.keys(SUIT_RANKS), suit => {
+    return _.range(2, 15).map((rank): Card => ({suit: suit as Suit, rank}));
+  })
+}
+
+export function randomDeal(): Deal {
+  const deck = _.shuffle(fullDeck());
+  return {
+    N: assembleHand(deck.slice(0, 13 * 1)),
+    S: assembleHand(deck.slice(13 * 1, 13 * 2)),
+    E: assembleHand(deck.slice(13 * 2, 13 * 3)),
+    W: assembleHand(deck.slice(13 * 3)),
+  };
 }
