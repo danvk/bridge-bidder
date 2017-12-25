@@ -92,6 +92,10 @@ interface PBNDeal {
   W: string;
 }
 
+export function formatHand(hand: Hand): string {
+  return _.flatten(_.values(hand)).map(formatCard).join(', ');
+}
+
 // Given a PBN string, return a player -> string holding mapping, e.g.
 // {N: 'AKQJ.984...', ...}
 function parsePBNStrings(pbn: string): PBNDeal {
@@ -159,9 +163,22 @@ export function randomDeal(): Deal {
 
 export function formatDeal(deal: Deal): string {
   return _.map(deal as any, (hand: Hand, player: string) => {
-    const handStr = _.flatten(_.values(hand)).map(formatCard).join(', ');
-    return `${player}: ${handStr}`;
+    return `${player}: ${formatHand(hand)}`;
   }).join('\n');
+}
+
+/** Which player has a particular card? */
+export function findCard(deal: Deal, card: Card): Player {
+  // XXX it's crazy that `for (const player in deal) {}` doesn't work here.
+  for (const player of ['N', 'S', 'E', 'W'] as (keyof Deal)[]) {
+    const holding = deal[player][card.suit];
+    for (const candidate of holding) {
+      if (compareCards(candidate, card) === 0) {
+        return player;
+      }
+    }
+  }
+  throw new Error(`Unable to find card ${formatCard(card)} in deal ${formatDeal(deal)}`);
 }
 
 export interface Play {
@@ -239,7 +256,8 @@ export function play(board: Board, card: Card): Board {
   }
 
   const {trick, player} = currentPlay;
-  const cardIndex = board.hands[player][card.suit].indexOf(card);
+  // TODO(danvk): do a deep comparison here, not an == comparison.
+  const cardIndex = _.findIndex(board.hands[player][card.suit], candidate => compareCards(candidate, card) === 0);
   if (cardIndex === -1) {
     throw new Error(`Tried to play ${formatCard(card)} which was not ${player}'s card to play.`);
   }
@@ -276,4 +294,8 @@ export function formatBoard(board: Board): string {
     ...board,
     hands: formatDeal(board.hands),
   }, null, 2);
+}
+
+export function playedCards(board: Board): Card[] {
+  return _.flatten(_.values(board.cardsTaken));
 }
