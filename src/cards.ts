@@ -4,13 +4,7 @@
 
 import * as _ from 'lodash';
 
-export enum Suit {
-  CLUBS = 'C',
-  DIAMONDS = 'D',
-  HEARTS = 'H',
-  SPADES = 'S',
-}
-
+export type Suit = 'C' | 'D' | 'H' | 'S';
 export type Player = 'N' | 'E' | 'S' | 'W';
 
 export interface Card {
@@ -153,4 +147,71 @@ export function randomDeal(): Deal {
     E: assembleHand(deck.slice(13 * 2, 13 * 3)),
     W: assembleHand(deck.slice(13 * 3)),
   };
+}
+
+export interface Play {
+  card: Card;
+  player: Player;
+}
+
+export interface Trick {
+  leader: Player;
+  plays: Play[];
+}
+
+export interface CompleteTrick extends Trick {
+  winner: Player;
+}
+
+/** A deal which is either being played or has been completed. */
+export interface Board {
+  trump?: Suit;
+  completedTricks: CompleteTrick[];
+  currentPlay?: {
+    trick: Trick;
+    player: Player;
+  }
+  /** Remaining cards */
+  hands: Deal;
+  /* Can be derived from completedTricks */
+  cardsTaken: {[k in keyof Deal]: Card[]};
+}
+
+export function findWinner(trick: Trick, trump?: Suit): Player {
+  let winner = trick.leader;
+  let winningCard = trick.plays[0].card;
+  const suitLed = winningCard.suit;
+
+  for (const play of trick.plays.slice(1)) {
+    const {card, player} = play;
+    if (
+      // Higher play, on-suit.
+      (suitLed === card.suit && winningCard.suit === card.suit && card.rank > winningCard.rank) ||
+      // Trump play.
+      (card.suit === trump && (card.rank > winningCard.rank || card.suit !== winningCard.suit))
+     ) {
+      winningCard = card;
+      winner = player;
+    }
+  }
+  return winner;
+}
+
+/** Move the currentPlay into completedTricks, awarding cards. Returns a new board. */
+function sweepTrick(board: Board): Board {
+  const {currentPlay} = board;
+  if (!currentPlay) {
+    throw new Error(`Cannot sweep a board without an in-progress trick.`);
+  }
+  const {trick} = currentPlay;
+  const winner = findWinner(trick, board.trump);
+
+  const newBoard = { ...board };
+  newBoard.completedTricks = board.completedTricks.concat([{...trick, winner}]);
+  newBoard.currentPlay = (newBoard.completedTricks.length < 13 ? {
+    player: winner,
+    trick: {leader: winner, plays: []}
+  } : undefined);
+  newBoard.cardsTaken[winner] = board.cardsTaken[winner].concat(trick.plays.map(play => play.card));
+  return newBoard;
 }
