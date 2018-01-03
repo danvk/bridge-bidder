@@ -34,9 +34,9 @@ function playTrick(hands: string[], strTricks: string[]): string {
 
 describe('basic hearts strategy', () => {
   const hands = [
-      '68.56K.248.23479',
+            '68.56K.248.23479',
   '245A.38.3J.58TJK', '39K.279QA.57KA.Q',
-      '7TJQ.4TJ.69TQ.6A'
+            '7TJQ.4TJ.69TQ.6A'
   ];
   const initBoard = makeBoard(hands, []);
 
@@ -73,7 +73,12 @@ describe('basic hearts strategy', () => {
       'W:5S 6S 3S JS',           // lead a low spade, ducking through to the J.
                'S:6D 3D 4D AD',  // lead low from D suit to the Ace
             'E:9S 7S 4S 8S',     // lead a low spade to the 8.
+         'N:2D 5D 9D JD',        // lead low diamond from shortest suit.
     ];
+
+    //          .56K.8.23479
+    // 2A.38..58TJK    K.279QA.7K.Q
+    //          TQ.4TJ.TQ.6A
 
     for (let i = 0; i < script.length; i++) {
       trick = playTrick(hands, plays);
