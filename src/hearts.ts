@@ -45,7 +45,7 @@ function getGameState(board: cards.Board): GameState {
   };
 }
 
-function pointsForCard(card: cards.Card): number {
+export function pointsForCard(card: cards.Card): number {
   if (card.suit === 'H') return 1;
   if (cards.compareCards(card, QUEEN_OF_SPADES) === 0) return 13;
   return 0;
