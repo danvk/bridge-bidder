@@ -65,14 +65,20 @@ describe('basic hearts strategy', () => {
   });
 
   it('should continue second hand as expected', () => {
-    expect(playTrick(hands, ['2C QC 6C KC'])).to.equal(
-      'W:5S 6S 3S JS'  // lead a low spade, ducking through to the J.
-    );
-    expect(playTrick(hands, ['2C QC 6C KC', '5S 6S 3S JS'])).to.equal(
-      'S:6D 3D 4D AD'  // lead low from D suit to the Ace
-    );
-    expect(playTrick(hands, ['2C QC 6C KC', '5S 6S 3S JS', '6D 3D 4D AD'])).to.equal(
-      'E:9S 7S 4S 8S'  // lead a low spade to the 8.
-    );
+    let trick: string;
+    const plays = ['2C QC 6C KC'];
+
+    const script = [
+      //  W  N  E  S  W  N  E
+      'W:5S 6S 3S JS',           // lead a low spade, ducking through to the J.
+               'S:6D 3D 4D AD',  // lead low from D suit to the Ace
+            'E:9S 7S 4S 8S',     // lead a low spade to the 8.
+    ];
+
+    for (let i = 0; i < script.length; i++) {
+      trick = playTrick(hands, plays);
+      expect(trick).to.equal(script[i]);
+      plays.push(trick.slice(2));
+    }
   });
 });
