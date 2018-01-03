@@ -33,7 +33,6 @@ function isHeartsBroken(board: cards.Board) {
 export interface GameState {
   isHeartsBroken: boolean;
   isQueenPlayed: boolean;
-  // pointsTaken: {[k in keyof cards.Deal]: number};
 }
 
 export const QUEEN_OF_SPADES: cards.Card = { suit: 'S', rank: 12 };
@@ -78,10 +77,6 @@ function legalPlays(board: cards.Board): cards.Hand {
 
     // We're leading.
     const hand = _.mapValues(fullHand, cards => cards.slice());
-    if (!isHeartsBroken(board) && cards.numCardsInHand(hand) !== _.size(hand.H)) {
-      // You can't lead a heard unless hearts has been broken or you have no choice.
-      hand.H = [];
-    }
     return hand;
   } else if (type === 'on-suit') {
     // If we can follow suit, we must.
@@ -93,6 +88,11 @@ function legalPlays(board: cards.Board): cards.Hand {
     // TODO(danvk): no blood on first trick.
     return _.mapValues(fullHand, cards => cards.slice());
   }
+}
+
+/** Is it legal to lead hearts from this hand? */
+export function mayLeadHearts(hand: cards.Hand, state: GameState): boolean {
+  return state.isHeartsBroken || cards.numCardsInHand(hand) === _.size(hand.H);
 }
 
 export interface Strategy {

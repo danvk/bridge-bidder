@@ -1,6 +1,6 @@
 import basicStrategy from '../src/basic-hearts-strategy';
 import * as hearts from '../src/hearts';
-import { Board, parsePBN, parseCard, play, Play, numCardsInHand, formatCard } from '../src/cards';
+import { Board, parsePBN, parseCard, play, Play, numCardsInHand, formatCard, formatBoard } from '../src/cards';
 import { makePlay } from '../src/hearts';
 import { expect } from 'chai';
 
@@ -64,9 +64,12 @@ describe('basic hearts strategy', () => {
     });
   });
 
-  it('should play second hand as expected', () => {
+  it('should continue second hand as expected', () => {
     expect(playTrick(hands, ['2C QC 6C KC'])).to.equal(
-      'W:5S 6S 3S JS'
+      'W:5S 6S 3S JS'  // lead a low spade, ducking through to the J.
+    );
+    expect(playTrick(hands, ['2C QC 6C KC', '5S 6S 3S JS'])).to.equal(
+      'S:6D 3D 4D AD'  // lead low from D suit to the Ace
     );
   });
 });

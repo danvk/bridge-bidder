@@ -311,9 +311,10 @@ export function play(board: Board, card: Card): Board {
     ...board.hands,
     [player]: {
       ...board.hands[player],
-      [card.suit]: _.without(board.hands[player][card.suit], card)
+      [card.suit]: _.filter(board.hands[player][card.suit], c => compareCards(c, card) !== 0)
     }
   }
+
   if (newTrick.plays.length === 4) {
     return sweepTrick(newBoard);
   }

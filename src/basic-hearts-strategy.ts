@@ -1,5 +1,5 @@
 import * as cards from './cards';
-import { Strategy, GameState, QUEEN_OF_SPADES, pointsForTrick, pointsForCard } from './hearts';
+import { Strategy, GameState, QUEEN_OF_SPADES, pointsForTrick, pointsForCard, mayLeadHearts } from './hearts';
 import * as _ from 'lodash';
 import { compareCards } from './cards';
 
@@ -60,7 +60,11 @@ const strategy: Strategy = {
     // Play the lowest legal card, preferring your shortest suit.
     const shortestSuit = getShortestSuit(hand);
     const allCards = cards.flattenHand(hand);
-    return _.minBy(allCards, card => card.rank * 10 + (card.suit === shortestSuit ? -1 : 0)) as cards.Card;
+    const heartsFactor = mayLeadHearts(hand, state) ? 0 : Infinity;
+    return _.minBy(allCards, card =>
+        card.rank * 10 +
+        (card.suit === shortestSuit ? -1 : 0) +
+        (card.suit === 'H' ? heartsFactor : 0)) as cards.Card;
   },
 
   follow(hand: cards.Hand, currentTrick: cards.InProgressTrick, state: GameState, candidates: cards.Card[]): cards.Card {
