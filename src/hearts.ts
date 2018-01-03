@@ -3,8 +3,11 @@ import * as _ from 'lodash';
 import * as cards from './cards';
 
 // Who's got the two of clubs?
-function makeBoard(deal: cards.Deal): cards.Board {
+export function makeBoard(deal: cards.Deal): cards.Board {
   const leader = cards.findCard(deal, {suit: 'C', rank: 2});
+  if (!leader) {
+    throw new Error('Unable to locate two of clubs on board');
+  }
   return {
     cardsTaken: {N: [], S: [], E: [], W: []},
     completedTricks: [],
@@ -27,7 +30,33 @@ function isHeartsBroken(board: cards.Board) {
   return false;
 }
 
+export interface GameState {
+  isHeartsBroken: boolean;
+  isQueenPlayed: boolean;
+  // pointsTaken: {[k in keyof cards.Deal]: number};
+}
+
+export const QUEEN_OF_SPADES: cards.Card = { suit: 'S', rank: 12 };
+
+function getGameState(board: cards.Board): GameState {
+  return {
+    isHeartsBroken: isHeartsBroken(board),
+    isQueenPlayed: cards.findCard(board.hands, QUEEN_OF_SPADES) === null,
+  };
+}
+
+function pointsForCard(card: cards.Card): number {
+  if (card.suit === 'H') return 1;
+  if (cards.compareCards(card, QUEEN_OF_SPADES) === 0) return 13;
+  return 0;
+}
+
+export function pointsForTrick(trick: cards.Trick): number {
+  return _.sum(trick.plays.map(play => pointsForCard(play.card)));
+}
+
 // Get a list of legal plays, grouped by suit.
+// TODO(danvk): move most of this logic into cards.ts.
 function legalPlays(board: cards.Board): cards.Hand {
   const {currentPlay} = board;
   if (!currentPlay) {
@@ -35,8 +64,9 @@ function legalPlays(board: cards.Board): cards.Hand {
   }
   const {player, trick} = currentPlay;
   const fullHand = board.hands[player];
+  const type = cards.getPlayType(board);
 
-  if (trick.plays.length === 0) {
+  if (type === 'lead') {
     // Is this the first play? If so, we must play the two of clubs!
     if (board.completedTricks.length === 0) {
       const twoClubs: cards.Card = {suit: 'C', rank: 2};
@@ -48,27 +78,54 @@ function legalPlays(board: cards.Board): cards.Hand {
 
     // We're leading.
     const hand = _.mapValues(fullHand, cards => cards.slice());
-    if (!isHeartsBroken(board)) {
+    if (!isHeartsBroken(board) && cards.numCardsInHand(hand) !== _.size(hand.H)) {
+      // You can't lead a heard unless hearts has been broken or you have no choice.
       hand.H = [];
     }
     return hand;
-  } else {
-    // Can we follow suit?
+  } else if (type === 'on-suit') {
+    // If we can follow suit, we must.
     const ledSuit = trick.plays[0].card.suit
     const followCards = fullHand[ledSuit];
-    if (followCards.length > 0) {
-      // If so, we must.
-      return {C: [], D: [], H: [], S: [], [ledSuit]: followCards.slice()};
-    } else {
-      // Otherwise, everything is fair game!
-      return _.mapValues(fullHand, cards => cards.slice());
-    }
+    return {C: [], D: [], H: [], S: [], [ledSuit]: followCards.slice()};
+  } else {
+    // Otherwise, everything is fair game!
+    // TODO(danvk): no blood on first trick.
+    return _.mapValues(fullHand, cards => cards.slice());
   }
 }
 
-const board = makeBoard(cards.randomDeal());
-console.log(cards.formatBoard(board));
-const plays = legalPlays(board);
-console.log(cards.formatHand(plays));
-const board2 = cards.play(board, plays.C[0]);
-console.log(legalPlays(board2));
+export interface Strategy {
+  pass(hand: cards.Hand, player: cards.Player): cards.Card[];
+  lead(hand: cards.Hand, currentTrick: cards.InProgressTrick, state: GameState, candidates: cards.Hand): cards.Card;
+  follow(hand: cards.Hand, currentTrick: cards.InProgressTrick, state: GameState, candidates: cards.Card[]): cards.Card;
+  discard(hand: cards.Hand, currentTrick: cards.InProgressTrick, state: GameState, candidates: cards.Hand): cards.Card;
+}
+
+export function makePlay(board: cards.Board, strategy: Strategy): cards.Play {
+  if (!board.currentPlay) {
+    throw new Error('No current play!');
+  }
+  const {player} = board.currentPlay;
+  const candidates = legalPlays(board);
+  const state = getGameState(board);
+  const type = cards.getPlayType(board);
+
+  // Make any trivial plays without consulting the strategy.
+  if (cards.numCardsInHand(candidates) === 1) {
+    const card = cards.flattenHand(candidates)[0];
+    return {
+      player,
+      card,
+    };
+  }
+
+  const hand = board.hands[player];
+  const trick = board.currentPlay;
+  return {
+    player,
+    card: type === 'lead' ? strategy.lead(hand, trick, state, candidates) :
+          type === 'on-suit' ? strategy.follow(hand, trick, state, _.sortBy(cards.flattenHand(candidates), c => c.rank)) :
+          strategy.discard(hand, trick, state, candidates),
+  };
+}

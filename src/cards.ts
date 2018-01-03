@@ -132,6 +132,17 @@ export function parsePBN(pbn: string): Deal {
   });
 }
 
+export function formatPBN(deal: Deal): string {
+  let player: keyof Deal = 'N';
+  const holdings = [];
+  do {
+    const hand = deal[player];
+    holdings.push(_.map(_.keys(SUIT_RANKS), suit => hand[suit].map(card => rankToText(card.rank)).join('')).join('.'));
+    player = NEXT_PLAYER[player];
+  } while (player !== 'N');
+  return 'N:' + holdings.join(' ');
+}
+
 /** Group cards into suits, sorted in ascending order. */
 export function assembleHand(cards: Card[]): Hand {
   const hand: Hand = {C: [], D: [], H: [], S: []};
@@ -142,6 +153,10 @@ export function assembleHand(cards: Card[]): Hand {
     holding.sort(compareCards);
   });
   return hand;
+}
+
+export function flattenHand(hand: Hand): Card[] {
+  return _.flatMap(_.values(hand));
 }
 
 /** Returns a new 52-element array of cards, in compareCards order. */
@@ -168,7 +183,7 @@ export function formatDeal(deal: Deal): string {
 }
 
 /** Which player has a particular card? */
-export function findCard(deal: Deal, card: Card): Player {
+export function findCard(deal: Deal, card: Card): Player|null {
   // XXX it's crazy that `for (const player in deal) {}` doesn't work here.
   for (const player of ['N', 'S', 'E', 'W'] as (keyof Deal)[]) {
     const holding = deal[player][card.suit];
@@ -178,7 +193,8 @@ export function findCard(deal: Deal, card: Card): Player {
       }
     }
   }
-  throw new Error(`Unable to find card ${formatCard(card)} in deal ${formatDeal(deal)}`);
+  return null;
+  // throw new Error(`Unable to find card ${formatCard(card)} in deal ${formatDeal(deal)}`);
 }
 
 export interface Play {
@@ -195,14 +211,16 @@ export interface CompleteTrick extends Trick {
   winner: Player;
 }
 
+export interface InProgressTrick {
+  trick: Trick;
+  player: Player;
+}
+
 /** A deal which is either being played or has been completed. */
 export interface Board {
   trump?: Suit;
   completedTricks: CompleteTrick[];
-  currentPlay?: {
-    trick: Trick;
-    player: Player;
-  }
+  currentPlay?: InProgressTrick;
   /** Remaining cards */
   hands: Deal;
   /* Can be derived from completedTricks */
@@ -248,6 +266,23 @@ function sweepTrick(board: Board): Board {
   return newBoard;
 }
 
+export type PlayType = 'lead' | 'on-suit' | 'off-suit';
+
+export function getPlayType(board: Board): PlayType {
+  const {currentPlay} = board;
+  if (!currentPlay) {
+    throw new Error(`Cannot play on a board without an in-progress trick.`);
+  }
+
+  const {trick, player} = currentPlay;
+  if (trick.plays.length === 0) return 'lead';
+
+  const ledSuit = trick.plays[0].card.suit;
+  return _.isEmpty(board.hands[player][ledSuit]) ? 'off-suit' : 'on-suit';
+}
+
+// TODO(danvk): write a generic legalPlays() function.
+
 /** Play the given card, completing the trick if appropriate. */
 export function play(board: Board, card: Card): Board {
   const {currentPlay} = board;
@@ -287,6 +322,10 @@ export function play(board: Board, card: Card): Board {
 
 export function isComplete(board: Board) {
   return board.completedTricks.length >= 13;
+}
+
+export function numCardsInHand(hand: Hand) {
+  return _.size(hand.C) + _.size(hand.D) + _.size(hand.H) + _.size(hand.S);
 }
 
 export function formatBoard(board: Board): string {
