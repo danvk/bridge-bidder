@@ -71,5 +71,8 @@ describe('basic hearts strategy', () => {
     expect(playTrick(hands, ['2C QC 6C KC', '5S 6S 3S JS'])).to.equal(
       'S:6D 3D 4D AD'  // lead low from D suit to the Ace
     );
+    expect(playTrick(hands, ['2C QC 6C KC', '5S 6S 3S JS', '6D 3D 4D AD'])).to.equal(
+      'E:3S 7S 4S 8S'  // lead a low spade to the 8.
+    );
   });
 });
