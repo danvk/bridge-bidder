@@ -1,6 +1,7 @@
 import * as cards from './cards';
 import { Strategy, GameState, QUEEN_OF_SPADES, pointsForTrick, pointsForCard } from './hearts';
 import * as _ from 'lodash';
+import { compareCards } from './cards';
 
 /**
  * A straightforward hearts strategy.
@@ -67,7 +68,7 @@ const strategy: Strategy = {
     const points = pointsForTrick(currentTrick.trick);
     const ledSuit = trick.plays[0].card.suit;
     const highRank = _.max(currentTrick.trick.plays.filter(c => c.card.suit === ledSuit).map(c => c.card.rank)) as number;
-    const highest = _.last(_.filter(candidates, c => pointsForCard(c) === 0));
+    const highest = _.last(_.filter(candidates, c => compareCards(c, QUEEN_OF_SPADES) !== 0));
     const duck = _.last(_.filter(candidates, c => c.rank < highRank));
     const lowest = candidates[0];
 
