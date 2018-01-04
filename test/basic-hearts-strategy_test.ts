@@ -73,12 +73,16 @@ describe('basic hearts strategy', () => {
       'W:5S 6S 3S JS',           // lead a low spade, ducking through to the J.
                'S:6D 3D 4D AD',  // lead low from D suit to the Ace
             'E:9S 7S 4S 8S',     // lead a low spade to the 8.
-         'N:2D 5D 9D JD',        // lead low diamond from shortest suit.
+            'E:5D 9D JD 8D',     // lead low diamond, west takes
+      'W:2S KH KS QS',           // lead low spade, south gets lucky!
+            'E:2H 4H 3H 6H',     // hearts have been broken, this lead is now legal.
+         'N:2D 7D TD 8H',        // north leads a low diamond, west dumps a heart.
+               'S:TS AS 5H AH',  // south leads TS, it works great!
+      'W:5C 4C QH AC',           // successfully push lead to S
+               'S:TH JC 9C 9H',  // South is stuck. E/N discard high cards.
+               'S:JH TC 7C 7H',
+               'S:QD 8C 3C KD',  // South escapes but it's too late.
     ];
-
-    //          .56K.8.23479
-    // 2A.38..58TJK    K.279QA.7K.Q
-    //          TQ.4TJ.TQ.6A
 
     for (let i = 0; i < script.length; i++) {
       trick = playTrick(hands, plays);
@@ -86,4 +90,10 @@ describe('basic hearts strategy', () => {
       plays.push(trick.slice(2));
     }
   });
+
+  // left to test:
+  // - no blood on the first trick
+  // - always play Queen when following, given the chance.
+  // - passing
+  // - scoring when the game is over.
 });

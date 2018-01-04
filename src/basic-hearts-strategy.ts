@@ -51,9 +51,7 @@ const strategy: Strategy = {
     if (!state.isQueenPlayed && !haveQueen) {
       const minSpade = _.minBy(hand.S, 'rank');
       if (minSpade && minSpade.rank < 12) {
-        const highestLowSpade = _.maxBy(hand.S, c => c.rank >= 12 ? -1 : c.rank);
-        if (!highestLowSpade) throw new Error('impossible');
-        return highestLowSpade;
+        return _.maxBy(hand.S, c => c.rank >= 12 ? -1 : c.rank) as cards.Card;
       }
     }
 
@@ -80,7 +78,9 @@ const strategy: Strategy = {
       // We're in fourth seat.
       // Play the highest card which will take a point-free trick.
       // or the highest card which does not take a point-ful trick if possible.
-      if (points === 0 && highest) {
+      if (!duck && highest) {
+        return highest;  // if we can't duck, we may as well win big.
+      } else if (points === 0 && highest) {
         return highest;
       } else {
         return duck || lowest;
